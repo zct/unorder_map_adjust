@@ -3,7 +3,7 @@
 using namespace std;
 
 int main() {
-    unordered_map<int, string> m1;
+    unordered_map<string, string> m1;
     unordered_map<int, string> m2;
     unordered_map<int, string> m3;
 

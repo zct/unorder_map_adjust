@@ -2128,9 +2128,9 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& 
 #else
         __node_holder __h = __construct_node_hash(__hash, __args);
 #endif
-        if (size()+1 > __bc * max_load_factor() || __bc == 0)
+        if (size()+1 >= __bc * max_load_factor() || __bc == 0)
         {
-            rehash(_VSTD::max<size_type>(2 * __bc + !__is_hash_power2(__bc),
+            rehash(_VSTD::max<size_type>(2 * __bc ,
                            size_type(ceil(float(size() + 1) / max_load_factor()))));
             __bc = bucket_count();
             __chash = __constrain_hash(__hash, __bc);
@@ -2376,9 +2376,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::rehash(size_type __n)
 _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK
 {
     if (__n == 1)
-        __n = 2;
-    else if (__n & (__n - 1))
-        __n = __next_prime(__n);
+        __n = 3;
+    __n = __next_prime(__n);
     size_type __bc = bucket_count();
     if (__n > __bc)
         __rehash(__n);
@@ -2411,41 +2410,26 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __nbc)
         for (size_type __i = 0; __i < __nbc; ++__i)
             __bucket_list_[__i] = nullptr;
         __next_pointer __pp = __p1_.first().__ptr();
+	//参照gcc8的rehash插入顺序修改的逻辑
         __next_pointer __cp = __pp->__next_;
-        if (__cp != nullptr)
-        {
-            size_type __chash = __constrain_hash(__cp->__hash(), __nbc);
-            __bucket_list_[__chash] = __pp;
-            size_type __phash = __chash;
-            for (__pp = __cp, __cp = __cp->__next_; __cp != nullptr;
-                                                           __cp = __pp->__next_)
-            {
-                __chash = __constrain_hash(__cp->__hash(), __nbc);
-                if (__chash == __phash)
-                    __pp = __cp;
-                else
-                {
-                    if (__bucket_list_[__chash] == nullptr)
-                    {
-                        __bucket_list_[__chash] = __pp;
-                        __pp = __cp;
-                        __phash = __chash;
-                    }
-                    else
-                    {
-                        __next_pointer __np = __cp;
-                        for (; __np->__next_ != nullptr &&
-                               key_eq()(__cp->__upcast()->__value_,
-                                        __np->__next_->__upcast()->__value_);
-                                                           __np = __np->__next_)
-                            ;
-                        __pp->__next_ = __np->__next_;
-                        __np->__next_ = __bucket_list_[__chash]->__next_;
-                        __bucket_list_[__chash]->__next_ = __cp;
+        __pp->__next_ = nullptr;
+        size_type __bbegin_bkt = 0;
+        while(__cp){
+          __next_pointer __next = __cp->__next_;
+          size_type __bkt =  __constrain_hash(__cp->__hash(), __nbc);
+           if (__bucket_list_[__bkt] == nullptr){
+                __cp->__next_ = __pp->__next_;
+                __pp->__next_ = __cp;
+                __bucket_list_[__bkt] = __pp;
+                if(__cp->__next_)
+                    __bucket_list_[__bbegin_bkt] = __cp;
+                __bbegin_bkt = __bkt;
 
-                    }
-                }
+            } else {
+              __cp->__next_ = __bucket_list_[__bkt]->__next_;
+              __bucket_list_[__bkt]->__next_ = __cp;
             }
+            __cp = __next;
         }
     }
 }

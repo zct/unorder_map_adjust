@@ -3,17 +3,17 @@
 using namespace std;
 
 int main() {
-    unordered_map<int, string> m1;
+    unordered_map<size_t, string> m1;
     unordered_map<int, string> m2;
     unordered_map<int, string> m3;
 
-    m1[2] = "john";
-    m1[4] = "sarah";
-    m1[1] = "mark";
-    m1[3] = "mbrk";
-    m1[5] = "markkk";
-    m1[6] = "mbrkkk";
-    m1[9] = "mcrk";
+    m1[16343632196508755401UL] = "john";
+    m1[10777408289226319274UL] = "sarah";
+    m1[1300673497423834513UL] = "mark";
+    m1[5696599213973820173UL] = "mbrk";
+    m1[9115971011690078475UL] = "markkk";
+    m1[11840118407354081667UL] = "mbrkkk";
+    m1[12440194178722958769UL] = "mcrk";
 
     /*m1[1] = "john";
     m1[2] = "sarah";

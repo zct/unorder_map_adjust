@@ -974,6 +974,19 @@ __loadword(const void* __p)
     return __r;
 }
 
+template <class _Size>
+inline _LIBCPP_INLINE_VISIBILITY
+_Size
+__loadbytes_sysl(const char* __p, int n)
+{
+    _Size __r = 0;
+    --n;
+    do{
+      __r = (__r << 8) +  static_cast<unsigned char>(__p[n]);
+    } while(--n >= 0);
+    return __r;
+}
+
 // We use murmur2 when size_t is 32 bits, and cityhash64 when size_t
 // is 64 bits.  This is because cityhash64 uses 64bit x 64bit
 // multiplication, which can be very slow on 32-bit systems.
@@ -1156,7 +1169,27 @@ template <class _Size>
 _Size
 __murmur2_or_cityhash<_Size, 64>::operator()(const void* __key, _Size __len)
 {
-  const char* __s = static_cast<const char*>(__key);
+ static const  _Size seed = 0xc70f6907UL;
+ static const _Size mul = (((_Size) 0xc6a4a793UL) << 32UL) + (_Size) 0x5bd1e995UL;
+
+  const char* const buf = static_cast<const char*>(__key);
+ const _Size len_aligend = __len & ~(_Size)0x7;
+ const char* const end = buf + len_aligend;
+ _Size hash = seed ^ (__len *mul);
+  for(const char *p = buf; p !=end; p+=8){
+    const _Size data = __shift_mix(__loadword<_Size>(p) * mul) * mul;
+    hash ^= data;
+    hash *= mul;
+  }
+  if((__len & 0x7) != 0){
+    const _Size data = __loadbytes_sysl<_Size>(end, __len & 0x7);
+    hash ^= data;
+    hash *= mul;
+  }
+  hash = __shift_mix(hash) * mul;
+  hash = __shift_mix(hash);
+  return hash;
+  /*const char* __s = static_cast<const char*>(__key);
   if (__len <= 32) {
     if (__len <= 16) {
       return __hash_len_0_to_16(__s, __len);
@@ -1195,7 +1228,7 @@ __murmur2_or_cityhash<_Size, 64>::operator()(const void* __key, _Size __len)
   } while (__len != 0);
   return __hash_len_16(
       __hash_len_16(__v.first, __w.first) + __shift_mix(__y) * __k1 + __z,
-      __hash_len_16(__v.second, __w.second) + __x);
+      __hash_len_16(__v.second, __w.second) + __x); */
 }
 
 template <class _Tp, size_t = sizeof(_Tp) / sizeof(size_t)>
